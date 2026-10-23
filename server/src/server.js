@@ -1,11 +1,15 @@
 require('dotenv').config();
 
+const dns = require('node:dns');
+dns.setServers(['8.8.8.8', '8.8.4.4']);
+
 const http = require('http');
 const mongoose = require('mongoose');
 const { Server } = require('socket.io');
 const app = require('./app');
 const connectDB = require('./config/database');
 const setupSocket = require('./config/socket');
+
 
 const PORT = parseInt(process.env.PORT, 10) || 5000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
