@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongo_data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: emergency_db
+    # Do not publish ports publicly in production
+    ports:
+      - "27017:27017"
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - emergency-net
+
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      PORT: 5000
+      MONGODB_URI: mongodb://mongo:27017/emergency_db
+      JWT_SECRET: ${JWT_SECRET:-change_this_to_a_long_random_secret_at_least_32_chars}
+      JWT_EXPIRES_IN: 7d
+      NODE_ENV: development
+      CORS_ORIGINS: http://localhost:3000,http://localhost:8081,http://localhost:19006
+      BCRYPT_SALT_ROUNDS: 12
+    depends_on:
+      mongo:
+        condition: service_healthy
+    networks:
+      - emergency-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  mongo_data:
+
+networks:
+  emergency-net:
+    driver: bridge
