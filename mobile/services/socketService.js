@@ -12,15 +12,33 @@ export const connectSocket = async (onEvent) => {
   const token = await getStoredToken();
   if (!token) return null;
 
+  // Clean up any stale instances before reconnecting
+  if (socket) {
+    socket.removeAllListeners();
+    socket.disconnect();
+  }
+
   socket = io(API_BASE_URL, {
     auth: { token },
-    transports: ['websocket'],
+    transports: ['websocket', 'polling'], // Fallback to HTTP polling if websocket is blocked
     reconnection: true,
-    reconnectionAttempts: 10,
+    reconnectionAttempts: 15,
+    reconnectionDelay: 1000,
+    reconnectionDelayMax: 5000,
+    timeout: 15000,
   });
 
-  socket.on('connect', () => console.log('Socket connected'));
-  socket.on('disconnect', () => console.log('Socket disconnected'));
+  socket.on('connect', () => {
+    if (__DEV__) console.log('[Socket] Connected successfully to', API_BASE_URL);
+  });
+
+  socket.on('connect_error', (err) => {
+    if (__DEV__) console.warn('[Socket Connection Error]:', err.message);
+  });
+
+  socket.on('disconnect', (reason) => {
+    if (__DEV__) console.log('[Socket] Disconnected:', reason);
+  });
 
   const events = [
     'emergency:created',
@@ -34,7 +52,9 @@ export const connectSocket = async (onEvent) => {
   events.forEach((evt) => {
     socket.off(evt);
     socket.on(evt, (payload) => {
-      if (eventHandler) eventHandler(evt, payload);
+      if (typeof eventHandler === 'function') {
+        eventHandler(evt, payload);
+      }
     });
   });
 
@@ -43,14 +63,21 @@ export const connectSocket = async (onEvent) => {
 
 export const disconnectSocket = () => {
   if (socket) {
+    socket.removeAllListeners();
     socket.disconnect();
     socket = null;
   }
 };
 
 export const subscribeEmergency = (id) => {
-  if (socket?.connected) {
+  if (socket?.connected && id) {
     socket.emit('subscribe:emergency', id);
+  }
+};
+
+export const unsubscribeEmergency = (id) => {
+  if (socket?.connected && id) {
+    socket.emit('unsubscribe:emergency', id);
   }
 };
 
