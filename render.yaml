@@ -15,7 +15,6 @@ services:
       - key: PORT
         value: 10000
       - key: MONGODB_URI
-        value: mongodb+srv://marketgoorg_db_user:<db_password>@emeg-2nd-proj.3zxmmyh.mongodb.net/emergency_db?retryWrites=true&w=majority
         sync: false
       - key: JWT_SECRET
         generateValue: true
@@ -47,7 +46,4 @@ services:
         destination: /index.html
     envVars:
       - key: REACT_APP_API_URL
-        fromService:
-          type: web
-          name: emergency-response-api
-          property: host
+        value: https://emergency-response-api.onrender.com
