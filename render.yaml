@@ -35,7 +35,6 @@ services:
   - type: web
     name: emergency-response-admin
     runtime: static
-    plan: free
     rootDir: admin
     buildCommand: npm ci && npm run build
     staticPublishPath: ./build
